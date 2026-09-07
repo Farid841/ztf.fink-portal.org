@@ -887,10 +887,16 @@ def submit_job(
         inf_config = yaml.load(open("config_inference.yml"), yaml.Loader)
         k8s_only = inf_config.get("K8S_ONLY_MODE", False)
         job_id = f"{d.date().isoformat()}_{d.microsecond}"
-        inf_input_topic = f"fink_ai_feed_{job_id}"
         inf_output_topic = f"fink_ai_{job_id}"
 
-        if not k8s_only:
+        if k8s_only:
+            # No dedicated Spark feed job in this mode: reuse the alerts
+            # already flowing into the main data-transfer topic (same date
+            # range and class filter) instead of a second topic nothing
+            # would ever produce to.
+            inf_input_topic = topic_name
+        else:
+            inf_input_topic = f"fink_ai_feed_{job_id}"
             inf_filename = f"spark_inference_{job_id}.py"
             with open("assets/spark_ztf_inference_feed.py") as f:
                 inf_code = textwrap.dedent(f.read())
