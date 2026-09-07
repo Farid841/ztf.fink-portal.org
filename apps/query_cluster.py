@@ -694,7 +694,19 @@ def update_commands_section(topic_name, inf_topic):
         f"    -partitionby {partition} \\\n"
         f"    --verbose"
     )
-    return dmc.CodeHighlight(code=dt_cmd, language="bash")
+    return html.Div(
+        [
+            html.Div(
+                dcc.Clipboard(
+                    content=dt_cmd,
+                    title="Copy command",
+                    style={"cursor": "pointer", "fontSize": "1rem"},
+                ),
+                style={"display": "flex", "justifyContent": "flex-end"},
+            ),
+            dmc.CodeHighlight(code=dt_cmd, language="bash", withCopyButton=False),
+        ]
+    )
 
 
 @app.callback(
