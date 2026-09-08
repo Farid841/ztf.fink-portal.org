@@ -9,4 +9,4 @@ K8S_ONLY_MODE: true
 # Pods of the same Job share the same CONSUMER_GROUP_ID, so Kafka splits the
 # topic's partitions across them automatically. Capped by the topic's
 # partition count — extra replicas beyond that just sit idle.
-INFERENCE_PARALLELISM: 10
+INFERENCE_PARALLELISM: 2
