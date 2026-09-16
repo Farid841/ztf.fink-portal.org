@@ -17,7 +17,6 @@ import textwrap
 
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
-import numpy as np
 import pandas as pd
 from astropy.coordinates import SkyCoord
 from astropy.time import Time
@@ -928,7 +927,7 @@ def generate_tns_badge(oid, get_icon=False):
             elif tns_type.startswith("TDE"):
                 icon = "/assets/types/TDE.png"
 
-            elif tns_type.startswith("AGN"): # ???
+            elif tns_type.startswith("AGN"):  # ???
                 icon = "/assets/types/AGN.png"
             elif tns_type.startswith("QSO"):
                 icon = "/assets/types/AGN.png"
@@ -1138,10 +1137,14 @@ def card_id1(object_data, object_uppervalid, object_upper):
         if c in simbad_types:
             color = class_colors["Simbad"]
 
-            if icon is None and is_latest_simbad: # Use latest only
+            if icon is None and is_latest_simbad:  # Use latest only
                 is_latest_simbad = False
 
-                if c.startswith("EB*") or c.startswith("Candidate_EB*") or c.startswith("EclBin"):
+                if (
+                    c.startswith("EB*")
+                    or c.startswith("Candidate_EB*")
+                    or c.startswith("EclBin")
+                ):
                     icon = "/assets/types/EclBin.png"
 
                 elif c.startswith("Variable*") or c.startswith("V*"):
@@ -1152,11 +1155,18 @@ def card_id1(object_data, object_uppervalid, object_upper):
                         icon = "/assets/types/AGN.png"
 
                 for _ in [
-                        "YSO", "Candidate_YSO",
-                        "pMS", "Candidate_pMS",
-                        "TTau", "Candidate_TTau",
-                        "Orion_V", "FUOr", "HH",
-                        "Eruptive", "Outflow", "outflow"
+                    "YSO",
+                    "Candidate_YSO",
+                    "pMS",
+                    "Candidate_pMS",
+                    "TTau",
+                    "Candidate_TTau",
+                    "Orion_V",
+                    "FUOr",
+                    "HH",
+                    "Eruptive",
+                    "Outflow",
+                    "outflow",
                 ]:
                     if c.startswith(_):
                         icon = "/assets/types/YSO.png"
@@ -1178,14 +1188,18 @@ def card_id1(object_data, object_uppervalid, object_upper):
                 ),
             )
 
-    tns_badge, tns_icon = generate_tns_badge(get_first_value(pdf, "i:objectId"), get_icon=True)
+    tns_badge, tns_icon = generate_tns_badge(
+        get_first_value(pdf, "i:objectId"), get_icon=True
+    )
     if tns_badge is not None:
         badges.append(tns_badge)
     if tns_icon is not None:
         # TNS classification takes precedence over Simbad
         icon = tns_icon
 
-    generic_badges, generic_icon = generate_generic_badges(pdf, variant="dot", get_icon=True)
+    generic_badges, generic_icon = generate_generic_badges(
+        pdf, variant="dot", get_icon=True
+    )
     badges += generic_badges
     if icon is None:
         icon = generic_icon
@@ -1210,13 +1224,16 @@ def card_id1(object_data, object_uppervalid, object_upper):
 
     if icon is not None:
         c1 = dmc.Avatar(
-            src=icon, size="xl",
+            src=icon,
+            size="xl",
             radius="xs",
             variant="filled",
             # styles={"image": {"padding": "5px"}}
         )
     else:
-        c1 = dmc.Avatar(src="/assets/types/Unknown.png", size="xl", radius="xs", variant="filled")
+        c1 = dmc.Avatar(
+            src="/assets/types/Unknown.png", size="xl", radius="xs", variant="filled"
+        )
 
     c2 = dmc.Title(
         objectid, order=1, style={"color": "#15284F", "wordWrap": "break-word"}
