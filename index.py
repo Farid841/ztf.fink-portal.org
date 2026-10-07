@@ -41,8 +41,6 @@ from dash_autocomplete_input import AutocompleteInput
 from app import server
 from app import app
 
-logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-
 from apps import summary, about, statistics, query_cluster, gw, xmatch
 
 from apps.utils import markdownify_objectid, class_colors, simbad_types
@@ -60,6 +58,8 @@ import pandas as pd
 import numpy as np
 
 import urllib
+
+logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
 
 config_args = extract_configuration("config.yml")
 
