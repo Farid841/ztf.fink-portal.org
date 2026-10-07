@@ -276,7 +276,16 @@ def ai_inference_tab():
             dmc.Space(h=20),
             dmc.MultiSelect(
                 label="AI Models",
-                description="Select one or more models from the MLflow registry. Results are written to a dedicated Kafka topic (separate from the data transfer topic).",
+                description=[
+                    "Select one or more models. Model missing? Check its ",
+                    dmc.Anchor(
+                        "build status",
+                        href="https://github.com/Farid841/pre_processing-container-generator-from-mlflow/actions",
+                        size="xs",
+                        target="_blank",
+                    ),
+                    ".",
+                ],
                 placeholder="start typing...",
                 id="inf-model-select",
                 data=models,
@@ -288,6 +297,18 @@ def ai_inference_tab():
         ],
         id="ai_inference_tab",
     )
+
+
+@app.callback(
+    Output("inf-model-select", "disabled"),
+    Output("inf-model-select", "value"),
+    Input("trans_datasource", "value"),
+)
+def toggle_ai_models(trans_datasource):
+    """AI inference is only available for ZTF"""
+    if trans_datasource == "ZTF":
+        return False, no_update
+    return True, []
 
 
 def filter_content_tab():
@@ -729,7 +750,8 @@ def submit_job(
     inf_model_select,
 ):
     """Submit a data transfer job to the Apache Spark cluster via Livy.
-    If AI models are selected (ZTF only), also submit the inference feed + K8s jobs.
+
+    If AI models are selected (ZTF only), also create the K8s inference jobs.
     """
     if not n_clicks:
         return no_update, no_update, no_update, no_update, no_update
@@ -816,6 +838,12 @@ def submit_job(
         "-kafka_sasl_password={}".format(input_args.get("KAFKA_SASL_PASSWORD", "")),
         "-path_to_tns=/spark_mongo_tmp/julien.peloton/tns.parquet",
     ]
+    run_ai = bool(inf_model_select) and trans_datasource == "ZTF"
+    if run_ai:
+        # The transfer topic is the inference input: the preprocessing
+        # needs candidate + prv_candidates whatever the user chose.
+        field_select = ["Medium packet"]
+
     if class_select is not None:
         [job_args.append(f"-fclass={elem}") for elem in class_select]
     if field_select is not None:
@@ -877,61 +905,21 @@ def submit_job(
         return True, alert, no_update, no_update, no_update
 
     # --- Optional AI (ZTF only) ---
-    if inf_model_select and trans_datasource == "ZTF":
-        inf_config = yaml.load(open("config_inference.yml"), yaml.Loader)
-        k8s_only = inf_config.get("K8S_ONLY_MODE", False)
+    if run_ai:
         job_id = f"{d.date().isoformat()}_{d.microsecond}"
         inf_output_topic = f"fink_ai_{job_id}"
-
-        if k8s_only:
-            # No dedicated Spark feed job in this mode: reuse the alerts
-            # already flowing into the main data-transfer topic (same date
-            # range and class filter) instead of a second topic nothing
-            # would ever produce to.
-            inf_input_topic = topic_name
-        else:
-            inf_input_topic = f"fink_ai_feed_{job_id}"
-            inf_filename = f"spark_inference_{job_id}.py"
-            with open("assets/spark_ztf_inference_feed.py") as f:
-                inf_code = textwrap.dedent(f.read())
-            inf_status, _ = upload_file_hdfs(
-                inf_code,
-                input_args["WEBHDFS"],
-                input_args["NAMENODE"],
-                input_args["USER"],
-                inf_filename,
-            )
-            if inf_status == 201:
-                inf_filepath = "hdfs://vdmaster1:8020/user/{}/{}".format(
-                    input_args["USER"], inf_filename
-                )
-                inf_args = [
-                    f"-startDate={date_range_picker[0]}",
-                    f"-stopDate={date_range_picker[1]}",
-                    f"-topic_name={inf_input_topic}",
-                    f"-kafka_bootstrap_servers={input_args['KAFKA_BOOTSTRAP_SERVERS']}",
-                    f"-kafka_sasl_username={input_args.get('KAFKA_SASL_USERNAME', '')}",
-                    f"-kafka_sasl_password={input_args.get('KAFKA_SASL_PASSWORD', '')}",
-                ]
-                if class_select:
-                    for c in class_select:
-                        inf_args.append(f"-fclass={c}")
-                submit_spark_job(
-                    input_args["LIVYHOST"],
-                    inf_filepath,
-                    input_args["SPARKCONF"],
-                    inf_args,
-                )
+        inf_config = yaml.load(open("config_inference.yml"), yaml.Loader)
 
         try:
-            created, k8s_errors = create_k8s_inference_jobs(
-                inf_input_topic, inf_output_topic, job_id, inf_model_select, inf_config
+            # the K8s jobs read the alerts from the main data-transfer topic
+            _, k8s_errors = create_k8s_inference_jobs(
+                topic_name, inf_output_topic, job_id, inf_model_select, inf_config
             )
         except Exception:
             logging.warning(
                 "[Inference] K8s job creation error:\n%s", traceback.format_exc()
             )
-            created, k8s_errors = [], ["K8s unavailable"]
+            k8s_errors = ["K8s unavailable"]
 
         notification = dmc.Stack(
             [
@@ -970,7 +958,7 @@ def submit_job(
             dmc.Code(topic_name),
         ]
     )
-    return True, notification, batchid, topic_name, no_update
+    return True, notification, batchid, topic_name, ""
 
 
 @app.callback(

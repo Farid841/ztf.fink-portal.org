@@ -427,10 +427,7 @@ def create_k8s_inference_jobs(
 
     from kubernetes import client as k8s_client, config as k8s_config
 
-    try:
-        k8s_config.load_incluster_config()
-    except Exception:
-        k8s_config.load_kube_config()
+    k8s_config.load_kube_config()
     batch_v1 = k8s_client.BatchV1Api()
 
     protocol = dt_config.get("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT")
