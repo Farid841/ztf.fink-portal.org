@@ -403,7 +403,7 @@ def _discover_component_image(model_name, version, component):
                 "[MLflow] Tag '%s' missing for %s@%s", tag_key, model_name, version
             )
         return image
-    except Exception:
+    except requests.RequestException:
         logging.warning(
             "[MLflow] Could not get image tag for %s@%s\n%s",
             model_name,
@@ -563,7 +563,7 @@ def create_k8s_inference_jobs(
             batch_v1.create_namespaced_job(namespace=namespace, body=pre_job)
             batch_v1.create_namespaced_job(namespace=namespace, body=model_job)
             created.append(model_str)
-        except Exception:
+        except k8s_client.ApiException:
             logging.warning(
                 "[K8s] Job creation failed for %s\n%s",
                 model_str,

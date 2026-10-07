@@ -254,16 +254,24 @@ snn_snia_vs_nonia > 0.5;
 
 def ai_inference_tab():
     models = get_available_models()
+    ci_url = "https://github.com/Farid841/pre_processing-container-generator-from-mlflow/actions"
+    mlflow_url = "https://mlflow.fink-broker.org"
 
     notice = (
         dmc.Alert(
-            "No models available. Make sure the CI has run and set the preprocessing_image / model_image tags on at least one MLflow model version.",
+            [
+                "No models available yet. Check the ",
+                dmc.Anchor("CI build status", href=ci_url, target="_blank"),
+                " or the model alias in ",
+                dmc.Anchor("MLflow", href=mlflow_url, target="_blank"),
+                ".",
+            ],
             color="orange",
             icon=DashIconify(icon="tabler:alert-circle"),
         )
         if not models
         else dmc.Alert(
-            "(Optional step) | Leave empty to skip running AI on retrieved alerts. Each selected model adds one prediction column in the output.",
+            "(Optional step) | Leave empty to skip running AI on retrieved alerts. Each selected model adds one prediction column in the output. With AI, the transferred alert content is always Medium packet.",
             color="blue",
             icon=DashIconify(icon="tabler:info-circle"),
         )
@@ -280,7 +288,7 @@ def ai_inference_tab():
                     "Select one or more models. Model missing? Check its ",
                     dmc.Anchor(
                         "build status",
-                        href="https://github.com/Farid841/pre_processing-container-generator-from-mlflow/actions",
+                        href=ci_url,
                         size="xs",
                         target="_blank",
                     ),
@@ -912,25 +920,37 @@ def submit_job(
 
         try:
             # the K8s jobs read the alerts from the main data-transfer topic
-            _, k8s_errors = create_k8s_inference_jobs(
+            created, k8s_errors = create_k8s_inference_jobs(
                 topic_name, inf_output_topic, job_id, inf_model_select, inf_config
             )
         except Exception:
             logging.warning(
                 "[Inference] K8s job creation error:\n%s", traceback.format_exc()
             )
-            k8s_errors = ["K8s unavailable"]
+            created, k8s_errors = [], ["K8s unavailable"]
+
+        if created:
+            alert = dmc.Alert(
+                "Data transfer and AI inference jobs submitted.",
+                title="Success",
+                color="green",
+                icon=DashIconify(icon="tabler:check"),
+            )
+        else:
+            # only the data transfer is running: point the user to its topic
+            inf_output_topic = ""
+            alert = dmc.Alert(
+                "Data transfer job submitted, but no AI inference job could be created.",
+                title="AI inference failed",
+                color="red",
+                icon=DashIconify(icon="tabler:alert-circle"),
+            )
 
         notification = dmc.Stack(
             [
-                dmc.Alert(
-                    "Data transfer and AI inference jobs submitted.",
-                    title="Success",
-                    color="green",
-                    icon=DashIconify(icon="tabler:check"),
-                ),
+                alert,
                 dmc.Text("Your topic:", fw=500),
-                dmc.Code(inf_output_topic),
+                dmc.Code(inf_output_topic or topic_name),
             ]
             + (
                 [

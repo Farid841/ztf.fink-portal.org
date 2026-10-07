@@ -1131,7 +1131,7 @@ def _fetch_model_aliases(mlflow_uri, auth, model_names):
                     "[MLflow] registered-models/get %s → HTTP %s", name, r.status_code
                 )
                 continue
-        except Exception:
+        except requests.RequestException:
             logging.warning(
                 "[MLflow] Could not fetch aliases for %s\n%s",
                 name,
@@ -1180,7 +1180,7 @@ def get_available_models():
             )
             return []
         versions = r.json().get("model_versions", [])
-    except Exception:
+    except requests.RequestException:
         logging.warning(
             "[MLflow] Could not reach %s\n%s", mlflow_uri, traceback.format_exc()
         )
