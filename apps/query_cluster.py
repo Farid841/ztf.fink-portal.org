@@ -271,7 +271,7 @@ def ai_inference_tab():
         )
         if not models
         else dmc.Alert(
-            "(Optional step) | Leave empty to skip running AI on retrieved alerts. Each selected model adds one prediction column in the output. With AI, the transferred alert content is always Medium packet.",
+            "Optional: leave empty to skip AI.",
             color="blue",
             icon=DashIconify(icon="tabler:info-circle"),
         )
