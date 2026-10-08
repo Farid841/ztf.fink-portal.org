@@ -44,7 +44,6 @@ from dash import html
 
 import fink_filters.ztf.livestream as ffz
 
-from app import cache
 
 # Access local or remove API endpoint
 
@@ -1146,7 +1145,6 @@ def _fetch_model_aliases(mlflow_uri, auth, model_names):
     return aliases_by_name_version
 
 
-@cache.memoize(expire=600)
 def get_available_models():
     """Fetch MLflow model versions ready for inference: both images built and an alias set.
 
